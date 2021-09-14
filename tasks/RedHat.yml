@@ -1,0 +1,96 @@
+---
+# task file to install/update/configure ntp on RHEL/CentOS
+
+- name: YUM | Ensure chrony is installed and up-to-date on 7
+  become: true
+  become_user: root
+  yum:
+    name: chrony
+    state: present
+    update_cache: true
+    disable_gpg_check: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python
+  when:
+    - "ansible_distribution_major_version | int <= 7"
+    
+- name: YUM | Ensure chrony is installed and up-to-date on 8
+  become: true
+  become_user: root
+  yum:
+    name: chrony
+    state: present
+    update_cache: true
+    disable_gpg_check: true
+  when:
+    - "ansible_distribution_major_version | int > 7" 
+
+- name: TEMPLATE | Template the /etc/chrony.conf file
+  become: true
+  become_user: root
+  template:
+    src: chrony.conf.j2
+    dest: /etc/chrony.conf
+    owner: root
+    group: root
+    mode: 'u=rw,g=r,o=r'
+
+- name: STAT | Check if ntp service exists
+  stat:
+    path: /usr/lib/systemd/system/ntpd.service
+  register: chrony_ntp
+
+- name: SYSTEMD | Ensure ntp is stopped and disabled
+  become: true
+  systemd:
+    name: ntpd
+    enabled: false
+    state: stopped
+    daemon_reload: true
+  when: chrony_ntp.stat.exists
+
+- name: SYSTEMD | Ensure chrony is started and enabled
+  become: true
+  systemd:
+    name: chronyd
+    enabled: true
+    state: restarted
+    daemon_reload: true
+
+- name: STAT | Check if firewall service exists
+  stat:
+    path: /usr/lib/systemd/system/firewalld.service
+  register: firewall
+
+- name: COMMAND | Check if firewalld is running
+  command: 'systemctl status firewalld'
+  when: firewall.stat.exists
+  register: firewall_status
+  ignore_errors: true
+  changed_when: false
+
+- name: FIREWALLD | Ensure NTP Service is enabled in firewall on 7
+  become: true
+  become_user: root
+  vars:
+    ansible_python_interpreter: /usr/bin/python
+  firewalld:
+    service: ntp
+    permanent: true
+    state: enabled
+    immediate: true
+  when: 
+    - firewall.stat.exists and firewall_status.rc == 0
+    - "ansible_distribution_major_version | int <= 7"
+
+- name: FIREWALLD | Ensure NTP Service is enabled in firewall on 8
+  become: true
+  become_user: root
+  firewalld:
+    service: ntp
+    permanent: true
+    state: enabled
+    immediate: true
+  when: 
+    - firewall.stat.exists and firewall_status.rc == 0
+    - "ansible_distribution_major_version | int > 7"

@@ -1,0 +1,4 @@
+---
+
+- name: Update packages using correct package manager -> {{ ansible_os_family }}
+  include: "{{ ansible_os_family }}.yml"

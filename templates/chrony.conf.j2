@@ -1,0 +1,4 @@
+# {{ansible_managed}}
+{% for item in linux_chrony_client %}
+{{ item + '\n'}}
+{%- endfor %}

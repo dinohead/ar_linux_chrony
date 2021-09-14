@@ -1,0 +1,9 @@
+---
+galaxy_info:
+  author: Derek 'dRock' Halsey
+  description: Setup chrony configuration on Linux hosts
+  company: Dinohead LLC
+  license: MIT
+  min_ansible_version: 2.9
+dependencies: []
+
